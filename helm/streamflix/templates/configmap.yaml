@@ -1,0 +1,19 @@
+# ==========================================
+# Kubernetes ConfigMap Template (configmap.yaml)
+# ==========================================
+# Stores non-sensitive application environment configurations.
+# Injected into the StreamFlix pods at runtime as environment variables.
+# ==========================================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  # Unique name matching deployment for env mapping
+  name: {{ include "streamflix.fullname" . }}
+  labels:
+    {{- include "streamflix.labels" . | nindent 4 }}
+data:
+  # Renders all key-value configuration values defined in values.yaml
+  {{- if .Values.configData }}
+  {{- toYaml .Values.configData | nindent 2 }}
+  {{- end }}

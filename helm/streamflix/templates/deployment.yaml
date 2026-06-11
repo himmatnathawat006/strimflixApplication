@@ -1,0 +1,79 @@
+# Kubernetes Deployment definition for managing StreamFlix application pods
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "streamflix.fullname" . }}
+  labels:
+    {{- include "streamflix.labels" . | nindent 4 }}
+spec:
+  # Pod replicas setting
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  
+  # Pod selector matching labels
+  selector:
+    matchLabels:
+      {{- include "streamflix.selectorLabels" . | nindent 6 }}
+      
+  # Pod Template specification
+  template:
+    metadata:
+      labels:
+        {{- include "streamflix.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+              
+          # Environment variables from ConfigMaps & Secrets
+          envFrom:
+            - configMapRef:
+                name: {{ include "streamflix.fullname" . }}
+            - secretRef:
+                name: {{ include "streamflix.fullname" . }}
+                
+          # Persistent Volume Storage mounts
+          volumeMounts:
+            {{- if .Values.pvc.enabled }}
+            - name: storage-volume
+              mountPath: {{ .Values.pvc.mountPath }}
+            {{- end }}
+            
+          # Liveness, Readiness probes & Resource allocations
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+            
+      # Storage Volume Claims and scheduling properties
+      volumes:
+        {{- if .Values.pvc.enabled }}
+        - name: storage-volume
+          persistentVolumeClaim:
+            claimName: {{ include "streamflix.fullname" . }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

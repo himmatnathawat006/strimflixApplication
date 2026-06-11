@@ -1,0 +1,55 @@
+# ==========================================
+# Kubernetes Ingress Template (ingress.yaml)
+# ==========================================
+# Exposes internal cluster services externally via HTTP/HTTPS routing.
+# Maps domains (hosts) and URI paths to the backend service.
+# ==========================================
+
+{{- if .Values.ingress.enabled -}}
+{{- $fullName := include "streamflix.fullname" . -}}
+{{- $svcPort := .Values.service.port -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  # Name of Ingress configuration resource
+  name: {{ $fullName }}
+  labels:
+    {{- include "streamflix.labels" . | nindent 4 }}
+  # Inject ingress-specific custom configurations (e.g. SSL rewrite, body limits)
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  # Name of ingress controller class managing this ingress resource (e.g., ingress-nginx)
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  # Configure TLS (SSL certs) secrets and hosts for secure HTTPS connections
+  {{- if .Values.ingress.tls }}
+  tls:
+    {{- range .Values.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  # Define DNS routing rules matching domains to paths
+  rules:
+    {{- range .Values.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ $fullName }}
+                port:
+                  number: {{ $svcPort }}
+          {{- end }}
+    {{- end }}
+{{- end }}

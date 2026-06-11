@@ -1,0 +1,142 @@
+# ==============================================================================
+# StreamFlix Helm Chart Defaults (values.yaml)
+# ==============================================================================
+
+# Replicas & Container Image Configuration
+replicaCount: 2
+image:
+  repository: mystreamflix.azurecr.io/streamflix
+  pullPolicy: IfNotPresent
+  tag: "latest"
+imagePullSecrets: []
+
+# Name Overrides
+nameOverride: ""
+fullnameOverride: ""
+
+# Application Environment Configuration (ConfigMap data)
+configData:
+  ENVIRONMENT: "production"
+  API_URL: "https://api.streamflix.local"
+  THEME: "dark"
+  LOG_LEVEL: "info"
+
+# External Secret configuration (for Azure Key Vault secrets mapping)
+externalSecret:
+  enabled: true
+  secretStoreRef:
+    name: azure-keyvault-store
+    kind: SecretStore
+  data:
+    - secretKey: db_password
+      remoteRef:
+        key: streamflix-db-password
+    - secretKey: api_jwt_token
+      remoteRef:
+        key: streamflix-jwt-secret
+
+# High Availability: PodDisruptionBudget Configuration
+pdb:
+  enabled: true
+  minAvailable: 1
+
+# Network Security: ingress-nginx traffic rules
+networkPolicy:
+  enabled: true
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 80
+
+# Durable Storage: PersistentVolumeClaim configuration
+pvc:
+  enabled: true
+  storageClassName: "standard"
+  accessModes:
+    - ReadWriteOnce
+  size: "1Gi"
+  mountPath: "/usr/share/nginx/html/data"
+
+# Scheduled Background Maintenance: CronJob configurations
+cronJob:
+  enabled: true
+  schedule: "0 0 * * *"
+  concurrencyPolicy: Forbid
+  image:
+    repository: busybox
+    tag: stable
+    pullPolicy: IfNotPresent
+  command: ["/bin/sh", "-c", "echo 'Running daily background maintenance check...'; date"]
+
+# Networking: Kubernetes ClusterIP Service configurations
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 80
+
+# Ingress: External HTTP/HTTPS routing configurations
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  hosts:
+    - host: streamflix.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Resource Management: CPU and Memory Limits/Requests
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Health Probes: Liveness & Readiness Check configurations
+livenessProbe:
+  httpGet:
+    path: /index.html
+    port: http
+  initialDelaySeconds: 15
+  periodSeconds: 20
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /index.html
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 3
+
+# Horizontal Pod Autoscaling (HPA) settings
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Prometheus Monitoring Integration (ServiceMonitor)
+prometheus:
+  enabled: true
+  path: /metrics
+  port: http
+  interval: 15s
+
+# Advanced Node Scheduling Configurations (Selectors, Tolerations, Affinity)
+nodeSelector: {}
+tolerations: []
+affinity: {}

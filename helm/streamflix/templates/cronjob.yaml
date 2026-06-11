@@ -1,0 +1,38 @@
+# ==========================================
+# Kubernetes CronJob Template (cronjob.yaml)
+# ==========================================
+# Configures automated, scheduled run-to-completion container jobs.
+# Used for daily background maintenance tasks, database cleanups, and stats.
+# ==========================================
+
+{{- if .Values.cronJob.enabled -}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  # Unique CronJob name with maintenance prefix
+  name: {{ include "streamflix.fullname" . }}-maintenance
+  labels:
+    {{- include "streamflix.labels" . | nindent 4 }}
+spec:
+  # Schedule string notation defined in values.yaml
+  schedule: {{ .Values.cronJob.schedule | quote }}
+  # Strategy handling overlapping executions (e.g., Forbid, Allow, Replace)
+  concurrencyPolicy: {{ .Values.cronJob.concurrencyPolicy | default "Forbid" }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "streamflix.selectorLabels" . | nindent 12 }}
+        spec:
+          # Restart policy for the Job container inside the pod (OnFailure or Never)
+          restartPolicy: OnFailure
+          containers:
+            - name: maintenance-job
+              # Docker image details for executing task script
+              image: "{{ .Values.cronJob.image.repository }}:{{ .Values.cronJob.image.tag }}"
+              imagePullPolicy: {{ .Values.cronJob.image.pullPolicy }}
+              # Execution command script
+              command:
+                {{- toYaml .Values.cronJob.command | nindent 16 }}
+{{- end }}

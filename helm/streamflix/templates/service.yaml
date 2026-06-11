@@ -1,0 +1,16 @@
+# Kubernetes Service configuration for routing cluster traffic
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "streamflix.fullname" . }}
+  labels:
+    {{- include "streamflix.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "streamflix.selectorLabels" . | nindent 4 }}

@@ -1,0 +1,44 @@
+# ==========================================
+# Kubernetes HorizontalPodAutoscaler (hpa.yaml)
+# ==========================================
+# Scales the replica counts dynamically within the min and max limits
+# based on CPU or Memory usage metrics.
+# ==========================================
+
+{{- if .Values.autoscaling.enabled -}}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "streamflix.fullname" . }}
+  labels:
+    {{- include "streamflix.labels" . | nindent 4 }}
+spec:
+  # Reference target resources to scale (our streamflix deployment)
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "streamflix.fullname" . }}
+  # Boundary replica counts
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  # Metric thresholds causing scale operations to trigger
+  metrics:
+    # Trigger scaling based on CPU consumption threshold
+    {{- if .Values.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    # Trigger scaling based on Memory consumption threshold
+    {{- if .Values.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}

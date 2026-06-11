@@ -1,0 +1,222 @@
+# ==============================================================================
+# StreamFlix Dev Environment Infrastructure DevSecOps CI/CD Pipeline
+# ==============================================================================
+
+name: Terraform DevSecOps - Dev Environment
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/dev.yaml'
+      - 'terraform/.github/workflows/dev.yaml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/dev.yaml'
+      - 'terraform/.github/workflows/dev.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  security-events: write
+
+jobs:
+  # ============================================================================
+  # STAGE 1: Infrastructure Security scanning & Linting & Planning (CI)
+  # ============================================================================
+  terraform-ci:
+    name: Dev Infrastructure CI
+    runs-on: ubuntu-latest
+    env:
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      TF_IN_AUTOMATION: 'true'
+
+    steps:
+      # Step 1.1: Fetch repository source code
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      # Step 1.2: GitLeaks Secrets Scan
+      - name: Run GitLeaks Secret Scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true # Allowed to continue but reports issues
+
+      # Step 1.3: Set up Terraform CLI
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+
+      # Step 1.4: Terraform Format Check
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+        working-directory: terraform
+
+      # Step 1.5: Set up TFLint
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v3
+        with:
+          tflint_version: v0.48.0
+
+      # Step 1.6: Run TFLint
+      - name: Run TFLint
+        run: |
+          tflint --init
+          tflint -r --filter=terraform/
+        continue-on-error: true
+
+      # Step 1.7: Checkov Security Scan
+      - name: Run Checkov IaC Scan
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: terraform/
+          framework: terraform
+          output_format: cli
+          soft_fail: true
+
+      # Step 1.8: tfsec Security Scan
+      - name: Run tfsec Scan
+        uses: aquasecurity/tfsec-action@v1.0.0
+        with:
+          working-directory: terraform
+          soft_fail: true
+
+      # Step 1.9: Trivy IaC Scan
+      - name: Run Trivy IaC Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: 'terraform/'
+          hide-progress: false
+          format: 'table'
+          exit-code: '0'
+          severity: 'CRITICAL,HIGH'
+
+      # Step 1.10: Log in to Azure for Backend/Plan authorization
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
+
+      # Step 1.11: Terraform Initialize
+      - name: Terraform Init
+        run: terraform init
+        working-directory: terraform/environments/dev
+
+      # Step 1.12: Terraform Validate
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: terraform/environments/dev
+
+      # Step 1.13: Terraform Plan
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -no-color -out=tfplan
+        working-directory: terraform/environments/dev
+
+      # Step 1.14: Upload Terraform Plan Artifact
+      - name: Upload Plan Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: tfplan
+          path: terraform/environments/dev/tfplan
+          retention-days: 7
+
+  # ============================================================================
+  # STAGE 2: Deploy & Validation & Compliance (CD)
+  # ============================================================================
+  terraform-cd:
+    name: Dev Infrastructure CD (Apply)
+    runs-on: ubuntu-latest
+    needs: terraform-ci
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    environment:
+      name: dev-infra-apply # Requires manual approval gate
+    env:
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+    steps:
+      # Step 2.1: Fetch repository source code
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # Step 2.2: Set up Terraform CLI
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+
+      # Step 2.3: Log in to Azure
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
+
+      # Step 2.4: Download Plan Artifact
+      - name: Download Plan Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: tfplan
+          path: terraform/environments/dev/
+
+      # Step 2.5: Terraform Init (required prior to applying)
+      - name: Terraform Init
+        run: terraform init
+        working-directory: terraform/environments/dev
+
+      # Step 2.6: Terraform Apply
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
+        working-directory: terraform/environments/dev
+
+      # Step 2.7: Post Deployment Validation
+      - name: Run Post-Deployment Validation
+        run: |
+          chmod +x ./validate-deployment.sh
+          ./validate-deployment.sh
+        working-directory: terraform/environments/dev
+
+      # Step 2.8: Monitoring & Compliance Check
+      - name: Run Monitoring & Compliance Check
+        run: |
+          echo "Running resource tag and diagnostics checks..."
+          RESOURCE_GROUP=$(terraform output -raw resource_group_name 2>/dev/null || echo "Himmat-RG")
+          
+          echo "Verifying all resources in Resource Group $RESOURCE_GROUP have mandatory 'Environment' and 'Project' tags..."
+          resources_without_tags=$(az resource list --resource-group "$RESOURCE_GROUP" --query "[?tags.Environment==null || tags.Project==null].{Name:name, Type:type}" -o table)
+          
+          if [ -n "$resources_without_tags" ] && [ "$resources_without_tags" != "[]" ] && [ "$resources_without_tags" != "" ]; then
+            echo "::warning::The following resources are missing mandatory tagging compliance (Environment or Project tags):"
+            echo "$resources_without_tags"
+          else
+            echo "Tag Compliance Check: PASSED"
+          fi
+          
+          echo "Verifying Azure Diagnostic settings on Key Vault..."
+          KV_URI=$(terraform output -raw keyvault_uri 2>/dev/null || echo "")
+          if [ -n "$KV_URI" ]; then
+            KV_NAME=$(echo "$KV_URI" | sed -E 's|https://([^.]+).*|\1|')
+            diagnostic_settings=$(az monitor diagnostic-settings list --resource-group "$RESOURCE_GROUP" --resource "$KV_NAME" --resource-type "Microsoft.KeyVault/vaults" --query "value[].name" -o tsv 2>/dev/null || echo "")
+            if [ -n "$diagnostic_settings" ]; then
+              echo "Monitoring Compliance: Diagnostic settings found for Key Vault ($diagnostic_settings)."
+            else
+              echo "::warning::Compliance Warning: Diagnostic logging is NOT enabled on Key Vault ($KV_NAME). Please enable for security auditing."
+            fi
+          fi
+        working-directory: terraform/environments/dev

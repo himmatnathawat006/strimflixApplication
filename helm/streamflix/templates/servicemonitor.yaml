@@ -1,0 +1,31 @@
+# ==========================================
+# Kubernetes ServiceMonitor Template (servicemonitor.yaml)
+# ==========================================
+# Custom Resource Definition (CRD) monitored by the Prometheus Operator.
+# Instructs Prometheus scraper details to auto-discover and harvest service metrics.
+# ==========================================
+
+{{- if .Values.prometheus.enabled -}}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  # Name of ServiceMonitor resource
+  name: {{ include "streamflix.fullname" . }}
+  labels:
+    {{- include "streamflix.labels" . | nindent 4 }}
+    # Standard label used by Prometheus Operator deployment to select scraper targets
+    release: prometheus
+spec:
+  # Selector details identifying which service pods to scrape metrics from
+  selector:
+    matchLabels:
+      {{- include "streamflix.selectorLabels" . | nindent 6 }}
+  # Define endpoints where metrics are scraped
+  endpoints:
+    # Service port hosting metrics
+    - port: http
+      # Scrape route path (typically /metrics)
+      path: {{ .Values.prometheus.path | default "/metrics" }}
+      # Metrics collection frequency interval (e.g. 15s)
+      interval: {{ .Values.prometheus.interval | default "15s" }}
+{{- end }}

@@ -1,0 +1,5 @@
+{
+  "terraform.languageServer.rootModules": [
+    "./terraform/environments/dev"
+  ]
+}

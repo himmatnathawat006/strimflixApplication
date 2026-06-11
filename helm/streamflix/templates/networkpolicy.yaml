@@ -1,0 +1,27 @@
+# ==========================================
+# Kubernetes NetworkPolicy Template (networkpolicy.yaml)
+# ==========================================
+# Configures firewalls/network rules at the pod level to restrict pod-to-pod traffic.
+# Ensures that only authorized pods (like the Ingress controller) can send traffic to the app.
+# ==========================================
+
+{{- if .Values.networkPolicy.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  # NetworkPolicy name matching application fullname
+  name: {{ include "streamflix.fullname" . }}
+  labels:
+    {{- include "streamflix.labels" . | nindent 4 }}
+spec:
+  # Target pods to apply this network security policy to
+  podSelector:
+    matchLabels:
+      {{- include "streamflix.selectorLabels" . | nindent 6 }}
+  # Define which traffic types are evaluated (Ingress = incoming)
+  policyTypes:
+    - Ingress
+  # Rules defining allowed incoming network routes
+  ingress:
+    {{- toYaml .Values.networkPolicy.ingress | nindent 4 }}
+{{- end }}

@@ -1,0 +1,28 @@
+# ==========================================
+# Kubernetes PersistentVolumeClaim (pvc.yaml)
+# ==========================================
+# Requests persistent/durable disk storage block from the cluster storage class.
+# Mounted inside container to persist data across pod lifecycles.
+# ==========================================
+
+{{- if .Values.pvc.enabled -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  # Unique PVC name matching deployment fullname
+  name: {{ include "streamflix.fullname" . }}
+  labels:
+    {{- include "streamflix.labels" . | nindent 4 }}
+spec:
+  # Disk access modes (e.g. ReadWriteOnce: single mount, ReadWriteMany: shared)
+  accessModes:
+    {{- toYaml .Values.pvc.accessModes | nindent 4 }}
+  # Storage resource request size limit
+  resources:
+    requests:
+      storage: {{ .Values.pvc.size }}
+  # Target storage driver system defined in the cluster (e.g. standard, azurefile)
+  {{- if .Values.pvc.storageClassName }}
+  storageClassName: {{ .Values.pvc.storageClassName | quote }}
+  {{- end }}
+{{- end }}

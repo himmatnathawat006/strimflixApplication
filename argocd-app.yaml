@@ -1,0 +1,33 @@
+# ArgoCD Custom Resource Definition (CRD) for GitOps Application
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: streamflix-app
+  namespace: argocd
+  # Deleting the ArgoCD app will automatically clean up all deployed Kubernetes resources
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  # Source: Git repository details and path to the Helm chart
+  source:
+    repoURL: 'https://github.com/himmatnathawat006/strimflixApplication.git'
+    targetRevision: HEAD
+    path: helm/streamflix
+    helm:
+      valueFiles:
+        - values.yaml
+
+  # Destination: Target Kubernetes cluster API server and deployment namespace
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: default
+
+  # Sync Policy: Automated drift correction (self-heal), auto-cleanup (prune), and auto-create namespace
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

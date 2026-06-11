@@ -1,0 +1,28 @@
+# ==========================================
+# Kubernetes PodDisruptionBudget (pdb.yaml)
+# ==========================================
+# Enforces a minimum number of running pods during voluntary node drains
+# and cluster maintenance activities to ensure continuous service availability.
+# ==========================================
+
+{{- if .Values.pdb.enabled -}}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "streamflix.fullname" . }}
+  labels:
+    {{- include "streamflix.labels" . | nindent 4 }}
+spec:
+  # Minimum number of active healthy replicas required at all times
+  {{- if .Values.pdb.minAvailable }}
+  minAvailable: {{ .Values.pdb.minAvailable }}
+  {{- end }}
+  # Maximum number of concurrently inactive replicas allowed
+  {{- if .Values.pdb.maxUnavailable }}
+  maxUnavailable: {{ .Values.pdb.maxUnavailable }}
+  {{- end }}
+  # Selector finding pods matching this budget policy
+  selector:
+    matchLabels:
+      {{- include "streamflix.selectorLabels" . | nindent 6 }}
+{{- end }}

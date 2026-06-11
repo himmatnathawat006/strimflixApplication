@@ -1,0 +1,227 @@
+# ==============================================================================
+# StreamFlix DevSecOps CI/CD Pipeline
+# ==============================================================================
+# This workflow runs a complete Secure Software Development Lifecycle (SSDLC)
+# pipeline. It covers:
+# 1. Linting (YAML, Python, Dockerfile)
+# 2. Testing (Mock / Node unit test checks)
+# 3. Secret Scanning (GitLeaks)
+# 4. Static Code Security Analysis - SAST (Semgrep & SonarQube)
+# 5. Dependency Scanning (Snyk)
+# 6. Docker Image Build
+# 7. Container Security Scanning (Trivy)
+# 8. Container Push to Azure Container Registry (ACR)
+# 9. GitOps Deployment Update (Updates Helm chart image tag and commits it)
+# ==============================================================================
+
+name: StreamFlix DevSecOps CI/CD Pipeline
+
+# Trigger the pipeline on pushes or pull requests to the main branch, or manual triggers
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Permissions required by GitHub Actions runner to write content commits & post security events
+permissions:
+  contents: write
+  pull-requests: read
+  security-events: write
+
+jobs:
+  # ============================================================================
+  # JOB 1: Linting & Testing
+  # ============================================================================
+  lint-and-test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1.1: Fetch repository source code
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # Step 1.2: Install Python runtime required for run linter tools
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      # Step 1.3: Install linters via pip (pylint for python, yamllint for configs)
+      - name: Install Pylint & Yamllint
+        run: |
+          python -m pip install --upgrade pip
+          pip install pylint yamllint
+
+      # Step 1.4: Run Yamllint to check YAML format & structures across workflows & Helm charts
+      - name: Run Yamllint
+        run: |
+          # Lint yaml files, ignoring minor styling issues via config if present
+          yamllint .
+
+      # Step 1.5: Run Pylint to check Python files for style guidelines and static bugs
+      - name: Run Pylint
+        run: |
+          # Lint python files if any are present in the repository
+          PYTHON_FILES=$(find . -name "*.py")
+          if [ -n "$PYTHON_FILES" ]; then
+            pylint $PYTHON_FILES
+          else
+            echo "No Python files found to lint."
+          fi
+
+      # Step 1.6: Run Hadolint to validate Dockerfile best practices (e.g. tag naming, cleanups)
+      - name: Lint Dockerfile (Hadolint)
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+
+      # Step 1.7: Run unit tests if a package.json file exists for Node/React
+      - name: Run Unit Tests (Mock / NPM)
+        run: |
+          if [ -f "package.json" ]; then
+            npm ci
+            npm test
+          else
+            echo "No package.json found. Skipping unit tests."
+          fi
+
+  # ============================================================================
+  # JOB 2: Static Analysis & Dependency Vulnerability Checking
+  # ============================================================================
+  security-scans:
+    name: Security Scans (SAST & Secrets)
+    runs-on: ubuntu-latest
+    needs: lint-and-test # Runs only after linting and testing stages pass
+    steps:
+      # Step 2.1: Fetch full Git history to check commit history for credentials
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      # Step 2.2: Scan workspace commits and code for leaked passwords/tokens/secrets
+      - name: Run GitLeaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true # Allowed to continue for demo/setup purposes
+
+      # Step 2.3: Scan code patterns using Semgrep to discover common security bugs
+      - name: Run Semgrep
+        run: |
+          docker run --rm -v "${{ github.workspace }}:/src" returntocorp/semgrep semgrep scan --config=auto --error
+        continue-on-error: true
+
+      # Step 2.4: Scan dependencies (e.g. npm packages) for known CVE security concerns
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        continue-on-error: true
+
+      # Step 2.5: Submit codebase details to SonarQube / SonarCloud server for quality/security gating
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v2.0.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        continue-on-error: true
+
+  # ============================================================================
+  # JOB 3: Building, Scanning & Deploying Container
+  # ============================================================================
+  build-scan-and-push:
+    name: Build, Scan & Push Container Image
+    runs-on: ubuntu-latest
+    needs: security-scans # Runs only after security scanning stage completes
+    steps:
+      # Step 3.1: Fetch repository source code
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # Step 3.2: Configure Docker Buildx (adds support for platform targets and advanced caching)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      # Step 3.3: Login to the destination Azure Container Registry (ACR)
+      - name: Log in to Azure Container Registry (ACR)
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.AZURE_CLIENT_ID }}
+          password: ${{ secrets.AZURE_CLIENT_SECRET }}
+
+      # Step 3.4: Generate image tags (e.g., branch-sha-timestamp) automatically
+      - name: Extract Metadata (Tags, Labels)
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ secrets.ACR_LOGIN_SERVER }}/streamflix
+          tags: |
+            type=sha,format=long
+            type=raw,value=latest
+
+      # Step 3.5: Build container locally without pushing it immediately (required for scanning)
+      - name: Build Docker Image locally
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          load: true # Load image into local docker engine registry
+          tags: streamflix-local:${{ github.sha }}
+
+      # Step 3.6: Scan the local image for OS packages and file vulnerabilities (CVEs)
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'streamflix-local:${{ github.sha }}'
+          format: 'table'
+          exit-code: '1' # Fails build if high/critical vulnerabilities found
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+        continue-on-error: true # Allowed to continue for demo/setup purposes
+
+      # Step 3.7: Push the scanned image tags to Azure Container Registry (ACR)
+      - name: Push Docker Image to ACR
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  # ============================================================================
+  # JOB 4: GitOps Value Tag Update for ArgoCD
+  # ============================================================================
+  gitops-update:
+    name: Update GitOps Config
+    runs-on: ubuntu-latest
+    needs: build-scan-and-push # Runs after the new container is successfully built & pushed
+    if: github.event_name != 'pull_request'
+    steps:
+      # Step 4.1: Fetch repository source code
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # Step 4.2: Replace image tag in values.yaml with the newly generated commit tag using yq
+      - name: Update Image Tag in Helm values
+        run: |
+          # Update value in Helm Chart using pre-installed yq
+          yq -i '.image.tag = "sha-${{ github.sha }}"' helm/streamflix/values.yaml
+
+      # Step 4.3: Commit and push the values.yaml file back to GitHub. ArgoCD will catch this commit
+      - name: Commit and Push Changes (GitOps)
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add helm/streamflix/values.yaml
+          git commit -m "chore(gitops): update streamflix image tag to sha-${{ github.sha }} [skip ci]"
+          git push
