@@ -1,3 +1,4 @@
+{{- if .Values.ingress.enabled -}}
 # ==========================================
 # Kubernetes Ingress Template (ingress.yaml)
 # ==========================================
@@ -5,9 +6,8 @@
 # Maps domains (hosts) and URI paths to the backend service.
 # ==========================================
 
-{{- if .Values.ingress.enabled -}}
-{{- $fullName := include "streamflix.fullname" . -}}
-{{- $svcPort := .Values.service.port -}}
+{{ $fullName := include "streamflix.fullname" . -}}
+{{ $svcPort := .Values.service.port -}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
