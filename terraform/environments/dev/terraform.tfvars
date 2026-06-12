@@ -1,5 +1,5 @@
 subscription_id     = "b6172f60-9a69-46ff-b334-298e40a9d743"
-resource_group_name = "Himmat-RG" 
+resource_group_name = "Himmat-RG"
 location            = "eastus"
 environment         = "dev"
 
