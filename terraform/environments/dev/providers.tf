@@ -10,6 +10,12 @@ terraform {
       version = ">= 2.30.0"
     }
   }
+  backend "azurerm" {
+    resource_group_name  = "statefile_rg"
+    storage_account_name = "sastreamflixxebia"
+    container_name       = "tfstate"
+    key                  = "dev.tfstate"
+  }
 }
 
 provider "azurerm" {
