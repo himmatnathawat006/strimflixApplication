@@ -22,9 +22,11 @@ resource "azurerm_kubernetes_cluster" "aks" {
   }
 
   network_profile {
-    network_plugin    = var.network_profile.network_plugin
-    network_policy    = var.network_profile.network_policy
-    load_balancer_sku = var.network_profile.load_balancer_sku
+    network_plugin     = var.network_profile.network_plugin
+    network_policy     = var.network_profile.network_policy
+    load_balancer_sku  = var.network_profile.load_balancer_sku
+    service_cidr       = "10.244.0.0/16"
+    dns_service_ip     = "10.244.0.10"
   }
 
   oidc_issuer_enabled       = true
