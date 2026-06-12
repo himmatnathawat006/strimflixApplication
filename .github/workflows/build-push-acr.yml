@@ -146,7 +146,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v2
         with:
-          registry: ${{ secrets.ACR_LOGIN_SERVER }}
+          registry: acrstreamflixdev.azurecr.io
           username: ${{ secrets.AZURE_CLIENT_ID }}
           password: ${{ secrets.AZURE_CLIENT_SECRET }}
 
@@ -155,7 +155,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4
         with:
-          images: ${{ secrets.ACR_LOGIN_SERVER }}/streamflix
+          images: acrstreamflixdev.azurecr.io/streamflix
           tags: |
             type=sha,format=long
             type=raw,value=latest
