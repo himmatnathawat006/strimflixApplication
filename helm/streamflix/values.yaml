@@ -5,7 +5,7 @@
 # Replicas & Container Image Configuration
 replicaCount: 2
 image:
-  repository: mystreamflix.azurecr.io/streamflix
+  repository: acrstreamflixdev.azurecr.io/streamflix
   pullPolicy: IfNotPresent
   tag: "latest"
 imagePullSecrets: []
