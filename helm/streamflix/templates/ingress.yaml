@@ -39,8 +39,12 @@ spec:
   # Define DNS routing rules matching domains to paths
   rules:
     {{- range .Values.ingress.hosts }}
+    {{- if .host }}
     - host: {{ .host | quote }}
       http:
+    {{- else }}
+    - http:
+    {{- end }}
         paths:
           {{- range .paths }}
           - path: {{ .path }}
