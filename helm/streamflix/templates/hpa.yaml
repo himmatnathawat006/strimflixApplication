@@ -1,11 +1,10 @@
+{{- if .Values.autoscaling.enabled -}}
 # ==========================================
 # Kubernetes HorizontalPodAutoscaler (hpa.yaml)
 # ==========================================
 # Scales the replica counts dynamically within the min and max limits
 # based on CPU or Memory usage metrics.
 # ==========================================
-
-{{- if .Values.autoscaling.enabled -}}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:

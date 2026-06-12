@@ -1,11 +1,10 @@
+{{- if .Values.pvc.enabled -}}
 # ==========================================
 # Kubernetes PersistentVolumeClaim (pvc.yaml)
 # ==========================================
 # Requests persistent/durable disk storage block from the cluster storage class.
 # Mounted inside container to persist data across pod lifecycles.
 # ==========================================
-
-{{- if .Values.pvc.enabled -}}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

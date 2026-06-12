@@ -1,11 +1,10 @@
+{{- if .Values.cronJob.enabled -}}
 # ==========================================
 # Kubernetes CronJob Template (cronjob.yaml)
 # ==========================================
 # Configures automated, scheduled run-to-completion container jobs.
 # Used for daily background maintenance tasks, database cleanups, and stats.
 # ==========================================
-
-{{- if .Values.cronJob.enabled -}}
 apiVersion: batch/v1
 kind: CronJob
 metadata:

@@ -1,11 +1,10 @@
+{{- if .Values.pdb.enabled -}}
 # ==========================================
 # Kubernetes PodDisruptionBudget (pdb.yaml)
 # ==========================================
 # Enforces a minimum number of running pods during voluntary node drains
 # and cluster maintenance activities to ensure continuous service availability.
 # ==========================================
-
-{{- if .Values.pdb.enabled -}}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
