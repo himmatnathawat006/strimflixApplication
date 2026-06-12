@@ -7,20 +7,17 @@ replicaCount: 2
 image:
   repository: acrstreamflixdev.azurecr.io/streamflix
   pullPolicy: IfNotPresent
-  tag: "latest"
+  tag: "sha-a5c3adb1909af6294e5ff05ec5965a0a0ac232c9"
 imagePullSecrets: []
-
 # Name Overrides
 nameOverride: ""
 fullnameOverride: ""
-
 # Application Environment Configuration (ConfigMap data)
 configData:
   ENVIRONMENT: "production"
   API_URL: "https://api.streamflix.local"
   THEME: "dark"
   LOG_LEVEL: "info"
-
 # External Secret configuration (for Azure Key Vault secrets mapping)
 externalSecret:
   enabled: true
@@ -34,12 +31,10 @@ externalSecret:
     - secretKey: api_jwt_token
       remoteRef:
         key: streamflix-jwt-secret
-
 # High Availability: PodDisruptionBudget Configuration
 pdb:
   enabled: true
   minAvailable: 1
-
 # Network Security: ingress-nginx traffic rules
 networkPolicy:
   enabled: true
@@ -51,7 +46,6 @@ networkPolicy:
       ports:
         - protocol: TCP
           port: 80
-
 # Durable Storage: PersistentVolumeClaim configuration
 pvc:
   enabled: true
@@ -60,7 +54,6 @@ pvc:
     - ReadWriteOnce
   size: "1Gi"
   mountPath: "/usr/share/nginx/html/data"
-
 # Scheduled Background Maintenance: CronJob configurations
 cronJob:
   enabled: true
@@ -71,13 +64,11 @@ cronJob:
     tag: stable
     pullPolicy: IfNotPresent
   command: ["/bin/sh", "-c", "echo 'Running daily background maintenance check...'; date"]
-
 # Networking: Kubernetes ClusterIP Service configurations
 service:
   type: ClusterIP
   port: 80
   targetPort: 80
-
 # Ingress: External HTTP/HTTPS routing configurations
 ingress:
   enabled: true
@@ -91,7 +82,6 @@ ingress:
         - path: /
           pathType: Prefix
   tls: []
-
 # Resource Management: CPU and Memory Limits/Requests
 resources:
   limits:
@@ -100,7 +90,6 @@ resources:
   requests:
     cpu: 100m
     memory: 128Mi
-
 # Health Probes: Liveness & Readiness Check configurations
 livenessProbe:
   httpGet:
@@ -110,7 +99,6 @@ livenessProbe:
   periodSeconds: 20
   timeoutSeconds: 5
   failureThreshold: 3
-
 readinessProbe:
   httpGet:
     path: /index.html
@@ -120,7 +108,6 @@ readinessProbe:
   timeoutSeconds: 5
   successThreshold: 1
   failureThreshold: 3
-
 # Horizontal Pod Autoscaling (HPA) settings
 autoscaling:
   enabled: true
@@ -128,14 +115,12 @@ autoscaling:
   maxReplicas: 10
   targetCPUUtilizationPercentage: 80
   targetMemoryUtilizationPercentage: 80
-
 # Prometheus Monitoring Integration (ServiceMonitor)
 prometheus:
   enabled: true
   path: /metrics
   port: http
   interval: 15s
-
 # Advanced Node Scheduling Configurations (Selectors, Tolerations, Affinity)
 nodeSelector: {}
 tolerations: []
