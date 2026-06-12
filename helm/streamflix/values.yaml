@@ -20,7 +20,7 @@ configData:
   LOG_LEVEL: "info"
 # External Secret configuration (for Azure Key Vault secrets mapping)
 externalSecret:
-  enabled: true
+  enabled: false
   secretStoreRef:
     name: azure-keyvault-store
     kind: SecretStore
@@ -117,7 +117,7 @@ autoscaling:
   targetMemoryUtilizationPercentage: 80
 # Prometheus Monitoring Integration (ServiceMonitor)
 prometheus:
-  enabled: true
+  enabled: false
   path: /metrics
   port: http
   interval: 15s
