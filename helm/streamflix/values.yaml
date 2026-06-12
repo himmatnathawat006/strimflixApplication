@@ -49,7 +49,7 @@ networkPolicy:
 # Durable Storage: PersistentVolumeClaim configuration
 pvc:
   enabled: true
-  storageClassName: "standard"
+  storageClassName: "default"
   accessModes:
     - ReadWriteOnce
   size: "1Gi"
