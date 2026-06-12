@@ -52,6 +52,7 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.0
+          terraform_wrapper: false
 
       # Step 1.4: Terraform Format Check
       - name: Terraform Format Check
@@ -154,6 +155,7 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.0
+          terraform_wrapper: false
 
       # Step 2.3: Log in to Azure
       - name: Log in to Azure
