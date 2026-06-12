@@ -1,11 +1,10 @@
+{{- if .Values.prometheus.enabled -}}
 # ==========================================
 # Kubernetes ServiceMonitor Template (servicemonitor.yaml)
 # ==========================================
 # Custom Resource Definition (CRD) monitored by the Prometheus Operator.
 # Instructs Prometheus scraper details to auto-discover and harvest service metrics.
 # ==========================================
-
-{{- if .Values.prometheus.enabled -}}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
