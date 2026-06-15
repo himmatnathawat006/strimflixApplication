@@ -30,7 +30,7 @@ on:
 permissions:
   contents: write
   pull-requests: read
-  security-events: write
+  security-events: write 
 
 jobs:
   # ============================================================================
