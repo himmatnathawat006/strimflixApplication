@@ -56,7 +56,7 @@ jobs:
 
       # Step 1.4: Terraform Format Check
       - name: Terraform Format Check
-        run: terraform fmt -check -recursive
+        run: terraform fmt -check -recursive 
         working-directory: terraform
 
       # Step 1.5: Set up TFLint
