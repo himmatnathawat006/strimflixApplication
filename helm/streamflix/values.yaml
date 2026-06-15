@@ -7,7 +7,7 @@ replicaCount: 2
 image:
   repository: acrstreamflixdev.azurecr.io/streamflix
   pullPolicy: IfNotPresent
-  tag: "sha-b1fe5753242fef5f40b09b7d01ad71a9a67ccd75"
+  tag: "sha-5a98487089985e7b080a422f2a20418461a94dee"
 imagePullSecrets: []
 # Name Overrides
 nameOverride: ""
