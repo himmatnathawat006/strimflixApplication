@@ -3,7 +3,7 @@
 # ==============================================================================
 
 # Replicas & Container Image Configuration
-replicaCount: 2
+replicaCount: 1
 image:
   repository: acrstreamflixdev.azurecr.io/streamflix
   pullPolicy: IfNotPresent
