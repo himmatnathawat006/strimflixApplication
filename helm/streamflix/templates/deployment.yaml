@@ -6,6 +6,8 @@ metadata:
   labels:
     {{- include "streamflix.labels" . | nindent 4 }}
 spec:
+  strategy:
+    type: Recreate
   # Pod replicas setting
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
