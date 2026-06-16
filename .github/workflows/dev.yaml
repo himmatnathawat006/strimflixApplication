@@ -67,7 +67,7 @@ jobs:
 
       # Step 1.5: Set up TFLint
       - name: Setup TFLint
-        uses: terraform-linters/setup-tflint@v3
+        uses: terraform-linters/setup-tflint@v3 
         with:
           tflint_version: v0.48.0
 

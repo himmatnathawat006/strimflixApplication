@@ -60,7 +60,7 @@ jobs:
 
       # Step 1.2: Install Python runtime required for run linter tools
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v4 
         with:
           python-version: '3.10'
 
