@@ -110,8 +110,8 @@ readinessProbe:
   failureThreshold: 3
 # Horizontal Pod Autoscaling (HPA) settings
 autoscaling:
-  enabled: true
-  minReplicas: 2
+  enabled: false
+  minReplicas: 1
   maxReplicas: 10
   targetCPUUtilizationPercentage: 80
   targetMemoryUtilizationPercentage: 80
