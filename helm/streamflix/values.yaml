@@ -66,7 +66,7 @@ cronJob:
   command: ["/bin/sh", "-c", "echo 'Running daily background maintenance check...'; date"]
 # Networking: Kubernetes ClusterIP Service configurations
 service:
-  type: ClusterIP
+  type: LoadBalancer
   port: 80
   targetPort: 80
 # Ingress: External HTTP/HTTPS routing configurations
