@@ -106,7 +106,7 @@ jobs:
     needs: lint-and-test # Runs only after linting and testing stages pass
     steps:
       # Step 2.1: Fetch full Git history to check commit history for credentials
-      - name: Checkout Repository
+      - name: Checkout Repository 
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
