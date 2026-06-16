@@ -30,13 +30,10 @@ resource "azurerm_user_assigned_identity" "identity" {
   }
 }
 
-# Access policy for Terraform service principal / deployer itself to allow setting secrets
-resource "azurerm_key_vault_access_policy" "deployer" {
-  key_vault_id = azurerm_key_vault.kv.id
-  tenant_id    = data.azurerm_client_config.current.tenant_id
-  object_id    = data.azurerm_client_config.current.object_id
-
-  secret_permissions = [
-    "Get", "List", "Set", "Delete", "Purge", "Recover"
-  ]
+# Role assignment for Terraform service principal / deployer itself to allow managing Key Vault (RBAC)
+resource "azurerm_role_assignment" "deployer" {
+  scope                = azurerm_key_vault.kv.id
+  role_definition_name = "Key Vault Administrator"
+  principal_id         = data.azurerm_client_config.current.object_id
 }
+
