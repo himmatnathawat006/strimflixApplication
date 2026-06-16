@@ -37,7 +37,7 @@ pdb:
   minAvailable: 1
 # Network Security: ingress-nginx traffic rules
 networkPolicy:
-  enabled: true
+  enabled: false
   ingress:
     - from:
         - namespaceSelector:
@@ -71,7 +71,7 @@ service:
   targetPort: 80
 # Ingress: External HTTP/HTTPS routing configurations
 ingress:
-  enabled: true
+  enabled: false
   className: "nginx"
   annotations:
     kubernetes.io/ingress.class: nginx
